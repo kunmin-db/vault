@@ -177,9 +177,9 @@ module('Integration | Component | mfa-form', function (hooks) {
 
   test('it should show countdown on passcode already used and rate limit errors', async function (assert) {
     const messages = {
-      used: 'code already used; new code is available in 45 seconds',
+      used: 'code already used; new code is available in 30 seconds',
       limit:
-        'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 15 seconds',
+        'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 30s seconds',
     };
     const codes = ['used', 'limit'];
     for (const code of codes) {

@@ -104,9 +104,11 @@ export default class MfaForm extends Component {
 
   @task *newCodeDelay(message) {
     // parse validity period from error string to initialize countdown
-    this.countdown = parseInt(message.match(/(\d\w seconds)/)[0].split(' ')[0]);
+    const durationRegex = message.match(/(\d+\w seconds)/);
+    this.countdown = parseInt(durationRegex[0].split(' ')[0]);
 
     if (Ember.testing) return;
+
 
     while (this.countdown > 0) {
       yield timeout(1000);
