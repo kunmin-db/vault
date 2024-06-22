@@ -102,13 +102,21 @@ export default class MfaForm extends Component {
     }
   }
 
-  @task *newCodeDelay(message) {
+  @task *newCodeDelay(errorMessage) {
+    let delay;
+
     // parse validity period from error string to initialize countdown
-    const durationRegex = message.match(/(\d+\w seconds)/);
-    this.countdown = parseInt(durationRegex[0].split(' ')[0]);
+    const delayRegExMatches = errorMessage.match(/(\d+\w seconds)/);
+    if (delayRegExMatches) {
+      delay = delayRegExMatches[0].split(' ')[0];
+    } else {
+      // default to 30 seconds if no delay is found
+      delay = 30;
+    }
+    this.countdown = parseInt(delay);
 
+    // skip countdown in testing environment
     if (Ember.testing) return;
-
 
     while (this.countdown > 0) {
       yield timeout(1000);

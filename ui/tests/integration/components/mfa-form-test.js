@@ -190,12 +190,10 @@ module('Integration | Component | mfa-form', function (hooks) {
           throw { errors: [messages[code]] };
         },
       });
-      const expectedTime = code === 'used' ? 45 : 15;
 
       await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
 
-      await fillIn('[data-test-mfa-passcode]', code);
-
+      await fillIn('[data-test-mfa-passcode]', 'foo');
       await click('[data-test-mfa-validate]');
 
       await waitFor('[data-test-mfa-countdown]');
@@ -207,6 +205,31 @@ module('Integration | Component | mfa-form', function (hooks) {
       assert.dom('[data-test-mfa-passcode]').isDisabled('Input is disabled during countdown');
       assert.dom('[data-test-inline-error-message]').exists('Alert message renders');
     }
+  });
+
+  test('it defaults countdown to 30 seconds if error message does not indicate when user can try again ', async function (assert) {
+    this.owner.lookup('service:auth').reopen({
+      totpValidate() {
+        throw {
+          errors: [
+            'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in beep-boop seconds',
+          ],
+        };
+      },
+    });
+    await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+
+    await fillIn('[data-test-mfa-passcode]', 'foo');
+    await click('[data-test-mfa-validate]');
+
+    await waitFor('[data-test-mfa-countdown]');
+
+    assert
+      .dom('[data-test-mfa-countdown]')
+      .includesText('30', 'countdown renders with correct initial value from error response');
+    assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled during countdown');
+    assert.dom('[data-test-mfa-passcode]').isDisabled('Input is disabled during countdown');
+    assert.dom('[data-test-inline-error-message]').exists('Alert message renders');
   });
 
   test('it should show error message for passcode invalid error', async function (assert) {
