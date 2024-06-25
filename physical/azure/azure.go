@@ -73,6 +73,12 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
+	managedIdentityClientId := os.Getenv("AZURE_MANAGED_IDENTITY_CLIENT_ID")
+	if managedIdentityClientId != "" {
+		managedIdentityClientId = conf["managedIdentityClientId"]
+		logger.Info("managedIdentityClientId set, using managed identity client id", "managedIdentityClientId", managedIdentityClientId)
+	}
+
 	environmentName := os.Getenv("AZURE_ENVIRONMENT")
 	if environmentName == "" {
 		environmentName = conf["environment"]
@@ -115,7 +121,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	var credential azblob.Credential
 	if useMSI {
-		authToken, err := getAuthTokenFromIMDS(environment.ResourceIdentifiers.Storage)
+		authToken, err := getAuthTokenFromIMDS(environment.ResourceIdentifiers.Storage, managedIdentityClientId)
 		if err != nil {
 			return nil, fmt.Errorf("failed to obtain auth token from IMDS %q: %w", environmentName, err)
 		}
@@ -306,13 +312,13 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 
 // getAuthTokenFromIMDS uses the Azure Instance Metadata Service to retrieve a short-lived credential using OAuth
 // more info on this https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview
-func getAuthTokenFromIMDS(resource string) (*adal.ServicePrincipalToken, error) {
-	msiEndpoint, err := adal.GetMSIVMEndpoint()
-	if err != nil {
-		return nil, err
+func getAuthTokenFromIMDS(resource string, managedIdentityClientId string) (*adal.ServicePrincipalToken, error) {
+	// Create ManagedIdentityOptions
+	options := &adal.ManagedIdentityOptions{
+		ClientID: managedIdentityClientId, // "710a22dc-ac7c-42b3-a429-3e624397a3d2", // hardcoded for koreacentral cluster autoscaler
 	}
 
-	spt, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+	spt, err := adal.NewServicePrincipalTokenFromManagedIdentity(resource, options)
 	if err != nil {
 		return nil, err
 	}
